@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>Roleta de Brindes</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-192.png">
+<meta name="theme-color" content="#2F053D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
   html, body { margin: 0; height: 100%; background: #ECECEE; font-family: Mulish, system-ui, sans-serif; color: #2F053D; overflow: hidden; }
@@ -423,6 +429,10 @@ if (document.documentElement.requestFullscreen || document.documentElement.webki
   document.addEventListener("webkitfullscreenchange", atualizarIconeTelaCheia);
 } else {
   botaoTelaCheia.style.display = "none";
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js").catch(function () {});
 }
 
 montarTeclado();
