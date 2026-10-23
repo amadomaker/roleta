@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Roleta de Brindes</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { margin: 0; height: 100%; background: #ECECEE; font-family: Mulish, system-ui, sans-serif; color: #2F053D; overflow: hidden; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vmin; }
+  h1 { margin: 0; font-size: 5vmin; letter-spacing: 0.3vmin; }
+  #area { position: relative; width: 72vmin; height: 72vmin; }
+  #roda { width: 100%; height: 100%; filter: drop-shadow(0 1vmin 2vmin rgba(47,5,61,0.3)); transition: transform 3s cubic-bezier(0.2, 0.6, 0.3, 1); }
+  #centro { position: absolute; top: 50%; left: 50%; width: 27%; height: 27%; transform: translate(-50%, -50%); border-radius: 50%;
+    background: #fff; border: 0.8vmin solid #FA7323; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1;
+    box-shadow: 0 0.5vmin 1.5vmin rgba(47,5,61,0.3); }
+  #centro img { width: 72%; height: auto; }
+  #ponteiro { position: absolute; top: -3vmin; left: 50%; width: 0; height: 0; transform: translateX(-50%);
+    border-left: 3.5vmin solid transparent; border-right: 3.5vmin solid transparent; border-top: 7vmin solid #FA7323;
+    filter: drop-shadow(0 0.5vmin 0.5vmin rgba(0,0,0,0.5)); z-index: 2; }
+  #girar { font-size: 4.5vmin; font-weight: 700; padding: 2vmin 8vmin; border: none; border-radius: 10vmin;
+    background: #FA7323; color: #fff; box-shadow: 0 1vmin 0 #b84d0c; }
+  #girar:active { transform: translateY(0.6vmin); box-shadow: 0 0.4vmin 0 #b84d0c; }
+  #girar:disabled { background: #666; color: #999; box-shadow: none; }
+  #som svg, #telaCheia svg, #engrenagem svg { width: 60%; height: 60%; display: block; margin: auto; }
+  #som { position: fixed; top: 2vmin; left: 2vmin; width: 7vmin; height: 7vmin; padding: 0; border: none;
+    border-radius: 50%; background: rgba(47,5,61,0.1); color: #2F053D; }
+  #telaCheia { position: fixed; top: 2vmin; left: 11vmin; width: 7vmin; height: 7vmin; padding: 0; border: none;
+    border-radius: 50%; background: rgba(47,5,61,0.1); color: #2F053D; }
+  #engrenagem { position: fixed; top: 2vmin; right: 2vmin; width: 7vmin; height: 7vmin; padding: 0; border: none;
+    border-radius: 50%; background: rgba(47,5,61,0.1); color: #2F053D; }
+  .fundo { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 10; }
+  .fundo.aberto { display: flex; }
+  .caixa { background: #fff; color: #2F053D; border-radius: 3vmin; padding: 4vmin; width: min(90vw, 70vmin); max-height: 90vh; overflow: auto; text-align: center; }
+  .caixa h2 { margin: 0 0 2vmin; font-size: 4.5vmin; }
+  #resultadoTexto { font-size: 7vmin; font-weight: 800; margin: 2vmin 0 3vmin; }
+  .botao { font-size: 3.6vmin; padding: 1.8vmin 5vmin; border: none; border-radius: 5vmin; background: #2F053D; color: #fff; margin: 1vmin; }
+  .botao.claro { background: #ddd; color: #2F053D; }
+  #pontos { display: flex; justify-content: center; gap: 2vmin; margin: 2vmin 0; height: 4vmin; }
+  #pontos span { width: 3vmin; height: 3vmin; border-radius: 50%; background: #ccc; }
+  #pontos span.cheio { background: #2F053D; }
+  #teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5vmin; }
+  #teclado button { font-size: 5vmin; padding: 2vmin 0; border: none; border-radius: 2vmin; background: #eee; color: #2F053D; }
+  #teclado button:active { background: #ccc; }
+  #erroSenha { color: #c0392b; height: 4vmin; font-size: 3vmin; }
+  .tremer { animation: tremer 0.35s; }
+  @keyframes tremer { 25% { transform: translateX(-1.5vmin); } 75% { transform: translateX(1.5vmin); } }
+  .linha { display: flex; align-items: center; justify-content: space-between; padding: 1.8vmin 1vmin; border-bottom: 1px solid #ddd; font-size: 3.8vmin; }
+  .chave { position: relative; width: 11vmin; height: 6vmin; border-radius: 6vmin; background: #bbb; flex: none; transition: background 0.2s; }
+  .chave::after { content: ""; position: absolute; top: 0.6vmin; left: 0.6vmin; width: 4.8vmin; height: 4.8vmin; border-radius: 50%; background: #fff; transition: left 0.2s; }
+  .chave.ligada { background: #27ae60; }
+  .chave.ligada::after { left: 5.6vmin; }
+</style>
+</head>
+<body>
+  <h1>GIRE E GANHE!</h1>
+  <div id="area">
+    <div id="ponteiro"></div>
+    <svg id="roda" viewBox="0 0 400 400"></svg>
+    <div id="centro"><img src="logo-amado-maker.png" alt="Amado Maker"></div>
+  </div>
+  <button id="girar">GIRAR</button>
+  <button id="som"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>
+  <button id="telaCheia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+  <button id="engrenagem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+
+  <div class="fundo" id="telaResultado">
+    <div class="caixa">
+      <h2 id="resultadoTitulo">Resultado</h2>
+      <div id="resultadoTexto"></div>
+      <button class="botao" id="resultadoOk">OK</button>
+    </div>
+  </div>
+
+  <div class="fundo" id="telaSenha">
+    <div class="caixa">
+      <h2>Digite a senha</h2>
+      <div id="pontos"><span></span><span></span><span></span><span></span></div>
+      <div id="erroSenha"></div>
+      <div id="teclado"></div>
+      <button class="botao claro" id="senhaCancelar">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="fundo" id="telaConfig">
+    <div class="caixa">
+      <h2>Brindes ativos</h2>
+      <div id="listaBrindes"></div>
+      <button class="botao claro" id="reativarTodos">Reativar todos</button>
+      <button class="botao" id="configFechar">Fechar</button>
+    </div>
+  </div>
+
+<script>
+const SENHA_CONFIG = "1234";
+const CHAVE_ARMAZENAMENTO = "roleta_brindes_ativos";
+const TEXTO_TENTE_DE_NOVO = "Tente de novo";
+const COR_ROXO_ESCURO = "#2F053D";
+const CORES_FATIAS = ["#FA7323", "#822D96", "#EBCE00", "#326EB4", "#E95F44", "#00A069", COR_ROXO_ESCURO];
+const CORES_TEXTO_FATIAS = ["#fff", "#fff", COR_ROXO_ESCURO, "#fff", "#fff", "#fff", "#fff"];
+
+const brindes = [
+  { nome: "Suporte MDF", ativo: true },
+  { nome: "Suporte 3D", ativo: true },
+  { nome: "Puzzle 3D", ativo: true },
+  { nome: "Bag Amado", ativo: true },
+  { nome: "Caneta", ativo: true },
+  { nome: "Copo", ativo: true },
+  { nome: TEXTO_TENTE_DE_NOVO, ativo: true, fixo: true }
+];
+
+const roda = document.getElementById("roda");
+const botaoGirar = document.getElementById("girar");
+const anguloFatia = 360 / brindes.length;
+let rotacaoAtual = 0;
+let girando = false;
+let senhaDigitada = "";
+
+function carregarEstado() {
+  try {
+    const salvo = JSON.parse(localStorage.getItem(CHAVE_ARMAZENAMENTO));
+    if (salvo) brindes.forEach(function (brinde) {
+      if (!brinde.fixo && brinde.nome in salvo) brinde.ativo = salvo[brinde.nome];
+    });
+  } catch (erro) {}
+}
+
+function salvarEstado() {
+  const estado = {};
+  brindes.forEach(function (brinde) { estado[brinde.nome] = brinde.ativo; });
+  try { localStorage.setItem(CHAVE_ARMAZENAMENTO, JSON.stringify(estado)); } catch (erro) {}
+}
+
+function pontoNoCirculo(anguloGraus, raio) {
+  const radianos = anguloGraus * Math.PI / 180;
+  return { x: 200 + raio * Math.sin(radianos), y: 200 - raio * Math.cos(radianos) };
+}
+
+function desenharRoda() {
+  const raio = 190;
+  let svg = '<circle cx="200" cy="200" r="198" fill="#fff"/>';
+  brindes.forEach(function (brinde, indice) {
+    const inicio = pontoNoCirculo(indice * anguloFatia, raio);
+    const fim = pontoNoCirculo((indice + 1) * anguloFatia, raio);
+    const cor = brinde.ativo ? CORES_FATIAS[indice] : "#e6e6e6";
+    const corTexto = brinde.ativo ? CORES_TEXTO_FATIAS[indice] : "#a8a8a8";
+    const centro = indice * anguloFatia + anguloFatia / 2;
+    svg += '<path d="M200 200 L' + inicio.x + ' ' + inicio.y + ' A' + raio + ' ' + raio + ' 0 0 1 ' + fim.x + ' ' + fim.y +
+      ' Z" fill="' + cor + '" stroke="#fff" stroke-width="2"/>';
+    svg += '<text x="' + (200 + raio - 14) + '" y="200" transform="rotate(' + (centro - 90) + ' 200 200)" ' +
+      'text-anchor="end" dominant-baseline="middle" font-size="17" font-weight="700" fill="' + corTexto + '">' + brinde.nome + '</text>';
+  });
+  roda.innerHTML = svg;
+  atualizarBotaoGirar();
+}
+
+function indicesAtivos() {
+  const lista = [];
+  brindes.forEach(function (brinde, indice) { if (brinde.ativo) lista.push(indice); });
+  return lista;
+}
+
+function atualizarBotaoGirar() {
+  const semOpcoes = indicesAtivos().length === 0;
+  botaoGirar.disabled = girando || semOpcoes;
+  botaoGirar.textContent = semOpcoes ? "SEM BRINDES" : "GIRAR";
+}
+
+
+let contextoAudio = null;
+let somLigado = true;
+const ICONE_SOM_LIGADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+const ICONE_SOM_DESLIGADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+const somGiro = new Audio("roleta.mp3");
+
+function prepararAudio() {
+  if (!contextoAudio) {
+    const ContextoAudio = window.AudioContext || window.webkitAudioContext;
+    if (ContextoAudio) contextoAudio = new ContextoAudio();
+  }
+  if (contextoAudio && contextoAudio.state === "suspended") contextoAudio.resume();
+}
+
+function tocarNota(frequencia, atraso, duracao, tipo, volume) {
+  if (!contextoAudio || !somLigado) return;
+  const inicio = contextoAudio.currentTime + atraso;
+  const oscilador = contextoAudio.createOscillator();
+  const ganho = contextoAudio.createGain();
+  oscilador.type = tipo;
+  oscilador.frequency.setValueAtTime(frequencia, inicio);
+  ganho.gain.setValueAtTime(volume, inicio);
+  ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + duracao);
+  oscilador.connect(ganho);
+  ganho.connect(contextoAudio.destination);
+  oscilador.start(inicio);
+  oscilador.stop(inicio + duracao + 0.02);
+}
+
+function balancarPonteiro() {
+  const ponteiro = document.getElementById("ponteiro");
+  ponteiro.animate([
+    { transform: "translateX(-50%) rotate(0deg)" },
+    { transform: "translateX(-50%) rotate(-16deg)", offset: 0.3 },
+    { transform: "translateX(-50%) rotate(0deg)" }
+  ], { duration: 90 });
+}
+
+function tocarSomPremio() {
+  [523, 659, 784, 1047].forEach(function (frequencia, indice) {
+    tocarNota(frequencia, indice * 0.12, 0.5, "triangle", 0.3);
+  });
+  tocarNota(1047, 0.5, 0.9, "sine", 0.25);
+}
+
+function tocarSomTenteDeNovo() {
+  tocarNota(392, 0, 0.35, "triangle", 0.3);
+  tocarNota(294, 0.25, 0.6, "triangle", 0.3);
+}
+
+function lerAnguloDaRoda() {
+  const transformacao = getComputedStyle(roda).transform;
+  if (!transformacao || transformacao === "none") return 0;
+  const matriz = new DOMMatrixReadOnly(transformacao);
+  return Math.atan2(matriz.b, matriz.a) * 180 / Math.PI;
+}
+
+function acompanharGiro(rotacaoInicial) {
+  let acumulado = rotacaoInicial;
+  let anguloAnterior = lerAnguloDaRoda();
+  let setorAnterior = Math.floor(acumulado / anguloFatia);
+  function quadro() {
+    if (!girando) return;
+    const angulo = lerAnguloDaRoda();
+    let diferenca = angulo - anguloAnterior;
+    if (diferenca > 180) diferenca -= 360;
+    if (diferenca < -180) diferenca += 360;
+    acumulado += diferenca;
+    anguloAnterior = angulo;
+    const setorAtual = Math.floor(acumulado / anguloFatia);
+    if (setorAtual !== setorAnterior) {
+      balancarPonteiro();
+      setorAnterior = setorAtual;
+    }
+    requestAnimationFrame(quadro);
+  }
+  requestAnimationFrame(quadro);
+}
+
+function girar() {
+  const ativos = indicesAtivos();
+  if (girando || ativos.length === 0) return;
+  prepararAudio();
+  if (somLigado) {
+    somGiro.currentTime = 0;
+    somGiro.play().catch(function () {});
+  }
+  const rotacaoInicial = rotacaoAtual;
+  girando = true;
+  atualizarBotaoGirar();
+
+  const sorteado = ativos[Math.floor(Math.random() * ativos.length)];
+  const desvio = (Math.random() - 0.5) * anguloFatia * 0.7;
+  const centroFatia = sorteado * anguloFatia + anguloFatia / 2 + desvio;
+  const alvo = ((360 - centroFatia) % 360 + 360) % 360;
+  const posicaoAtual = ((rotacaoAtual % 360) + 360) % 360;
+  const falta = ((alvo - posicaoAtual) % 360 + 360) % 360;
+  rotacaoAtual += 360 * 4 + falta;
+
+  roda.dataset.sorteado = sorteado;
+  roda.style.transform = "rotate(" + rotacaoAtual + "deg)";
+  acompanharGiro(rotacaoInicial);
+}
+
+roda.addEventListener("transitionend", function () {
+  if (!girando) return;
+  girando = false;
+  atualizarBotaoGirar();
+  const brinde = brindes[Number(roda.dataset.sorteado)];
+  const ehTente = brinde.fixo;
+  if (ehTente) tocarSomTenteDeNovo(); else tocarSomPremio();
+  document.getElementById("resultadoTitulo").textContent = ehTente ? "Quase!" : "Parabéns!";
+  document.getElementById("resultadoTexto").textContent = brinde.nome;
+  document.getElementById("telaResultado").classList.add("aberto");
+});
+
+document.getElementById("resultadoOk").addEventListener("click", function () {
+  document.getElementById("telaResultado").classList.remove("aberto");
+});
+
+botaoGirar.addEventListener("click", girar);
+document.getElementById("area").addEventListener("click", girar);
+
+function montarTeclado() {
+  const teclado = document.getElementById("teclado");
+  ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "OK"].forEach(function (tecla) {
+    const botao = document.createElement("button");
+    botao.textContent = tecla;
+    botao.addEventListener("click", function () { apertarTecla(tecla); });
+    teclado.appendChild(botao);
+  });
+}
+
+function atualizarPontos() {
+  const pontos = document.querySelectorAll("#pontos span");
+  pontos.forEach(function (ponto, indice) { ponto.classList.toggle("cheio", indice < senhaDigitada.length); });
+}
+
+function apertarTecla(tecla) {
+  const erro = document.getElementById("erroSenha");
+  erro.textContent = "";
+  if (tecla === "⌫") {
+    senhaDigitada = senhaDigitada.slice(0, -1);
+  } else if (tecla === "OK") {
+    conferirSenha();
+    return;
+  } else if (senhaDigitada.length < 4) {
+    senhaDigitada += tecla;
+  }
+  atualizarPontos();
+  if (senhaDigitada.length === 4) conferirSenha();
+}
+
+function conferirSenha() {
+  const caixa = document.querySelector("#telaSenha .caixa");
+  if (senhaDigitada === SENHA_CONFIG) {
+    fecharSenha();
+    abrirConfig();
+    return;
+  }
+  document.getElementById("erroSenha").textContent = "Senha incorreta";
+  senhaDigitada = "";
+  atualizarPontos();
+  caixa.classList.remove("tremer");
+  void caixa.offsetWidth;
+  caixa.classList.add("tremer");
+}
+
+function abrirSenha() {
+  senhaDigitada = "";
+  atualizarPontos();
+  document.getElementById("erroSenha").textContent = "";
+  document.getElementById("telaSenha").classList.add("aberto");
+}
+
+function fecharSenha() {
+  document.getElementById("telaSenha").classList.remove("aberto");
+}
+
+function montarListaConfig() {
+  const lista = document.getElementById("listaBrindes");
+  lista.innerHTML = "";
+  brindes.forEach(function (brinde) {
+    if (brinde.fixo) return;
+    const linha = document.createElement("div");
+    linha.className = "linha";
+    const nome = document.createElement("span");
+    nome.textContent = brinde.nome;
+    const chave = document.createElement("div");
+    chave.className = "chave" + (brinde.ativo ? " ligada" : "");
+    linha.addEventListener("click", function () {
+      brinde.ativo = !brinde.ativo;
+      chave.classList.toggle("ligada", brinde.ativo);
+      salvarEstado();
+      desenharRoda();
+    });
+    linha.appendChild(nome);
+    linha.appendChild(chave);
+    lista.appendChild(linha);
+  });
+}
+
+function abrirConfig() {
+  montarListaConfig();
+  document.getElementById("telaConfig").classList.add("aberto");
+}
+
+document.getElementById("som").addEventListener("click", function () {
+  somLigado = !somLigado;
+  this.innerHTML = somLigado ? ICONE_SOM_LIGADO : ICONE_SOM_DESLIGADO;
+  if (!somLigado) somGiro.pause();
+  prepararAudio();
+});
+document.getElementById("engrenagem").addEventListener("click", function () {
+  if (!girando) abrirSenha();
+});
+document.getElementById("senhaCancelar").addEventListener("click", fecharSenha);
+document.getElementById("configFechar").addEventListener("click", function () {
+  document.getElementById("telaConfig").classList.remove("aberto");
+});
+document.getElementById("reativarTodos").addEventListener("click", function () {
+  brindes.forEach(function (brinde) { brinde.ativo = true; });
+  salvarEstado();
+  montarListaConfig();
+  desenharRoda();
+});
+
+const ICONE_ENTRAR_TELA_CHEIA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
+const ICONE_SAIR_TELA_CHEIA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>';
+const botaoTelaCheia = document.getElementById("telaCheia");
+
+function emTelaCheia() {
+  return document.fullscreenElement || document.webkitFullscreenElement;
+}
+
+function alternarTelaCheia() {
+  if (emTelaCheia()) {
+    const sair = document.exitFullscreen || document.webkitExitFullscreen;
+    sair.call(document);
+  } else {
+    const raiz = document.documentElement;
+    const entrar = raiz.requestFullscreen || raiz.webkitRequestFullscreen;
+    entrar.call(raiz);
+  }
+}
+
+function atualizarIconeTelaCheia() {
+  botaoTelaCheia.innerHTML = emTelaCheia() ? ICONE_SAIR_TELA_CHEIA : ICONE_ENTRAR_TELA_CHEIA;
+}
+
+if (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) {
+  botaoTelaCheia.addEventListener("click", alternarTelaCheia);
+  document.addEventListener("fullscreenchange", atualizarIconeTelaCheia);
+  document.addEventListener("webkitfullscreenchange", atualizarIconeTelaCheia);
+} else {
+  botaoTelaCheia.style.display = "none";
+}
+
+montarTeclado();
+carregarEstado();
+desenharRoda();
+</script>
+</body>
+</html>
